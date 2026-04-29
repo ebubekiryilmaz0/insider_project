@@ -1,0 +1,96 @@
+name: QA Automation — InsiderOne
+
+on:
+  push:
+    branches: [main, master, develop]
+  pull_request:
+    branches: [main, master]
+  # Allow manual trigger from the GitHub UI
+  workflow_dispatch:
+
+jobs:
+  test:
+    name: Run Selenium Tests (Headless Chrome)
+    runs-on: ubuntu-latest
+
+    steps:
+      # ------------------------------------------------------------------
+      # 1. Checkout repository
+      # ------------------------------------------------------------------
+      - name: Checkout repository
+          uses: actions/checkout@v4
+
+      # ------------------------------------------------------------------
+      # 2. Set up Python
+      # ------------------------------------------------------------------
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      # ------------------------------------------------------------------
+      # 3. Install Chrome (latest stable)
+      # ------------------------------------------------------------------
+      - name: Install Google Chrome
+        uses: browser-actions/setup-chrome@v1
+        with:
+          chrome-version: stable
+
+      # ------------------------------------------------------------------
+      # 4. Install Python dependencies
+      # ------------------------------------------------------------------
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      # ------------------------------------------------------------------
+      # 5. Create reports directory
+      # ------------------------------------------------------------------
+      - name: Prepare reports directory
+        run: mkdir -p reports/screenshots
+
+      # ------------------------------------------------------------------
+      # 6. Execute test suite
+      # ------------------------------------------------------------------
+      - name: Run pytest
+        run: |
+          pytest \
+            --browser=chrome \
+            --headless=true \
+            --reruns=2 \
+            --reruns-delay=3 \
+            -v \
+            --html=reports/report.html \
+            --self-contained-html
+        env:
+          PYTHONPATH: .
+
+      # ------------------------------------------------------------------
+      # 7. Upload test artifacts (always — even on failure)
+      # ------------------------------------------------------------------
+      - name: Upload HTML report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-report-${{ github.run_number }}
+          path: reports/
+          retention-days: 30
+
+  # ------------------------------------------------------------------
+  # 8. Trigger Jenkins on Merge to Main
+  # ------------------------------------------------------------------
+  trigger-jenkins:
+    name: Signal Jenkins (On Main Merge)
+    needs: test
+    # This runs only when a push (or merged PR) happens on the main branch
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Jenkins Job
+        uses: appleboy/jenkins-action@master
+        with:
+          url: ${{ secrets.JENKINS_URL }}
+          user: ${{ secrets.JENKINS_USER }}
+          token: ${{ secrets.JENKINS_TOKEN }}
+          job: "Insider-Automation-Job" # Replace with your Jenkins job name
