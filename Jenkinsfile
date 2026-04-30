@@ -17,17 +17,18 @@ pipeline {
 
         stage('Setup Environment') {
             steps {
-                bat '''
-                    echo Creating virtual environment...
-                    python -m venv %VENV_DIR%
+                powershell '''
+                    Write-Host "Creating virtual environment..."
 
-                    echo Activating venv...
-                    call %VENV_DIR%\\Scripts\\activate
+                    python -m venv $env:VENV_DIR
 
-                    echo Upgrading pip...
+                    Write-Host "Activating venv..."
+                    & "$env:VENV_DIR\\Scripts\\Activate.ps1"
+
+                    Write-Host "Upgrading pip..."
                     python -m pip install --upgrade pip
 
-                    echo Installing dependencies...
+                    Write-Host "Installing dependencies..."
                     pip install -r requirements.txt
                 '''
             }
@@ -35,24 +36,27 @@ pipeline {
 
         stage('Prepare Reports Folder') {
             steps {
-                bat '''
-                    if not exist %REPORT_DIR% mkdir %REPORT_DIR%
+                powershell '''
+                    if (!(Test-Path $env:REPORT_DIR)) {
+                        New-Item -ItemType Directory -Path $env:REPORT_DIR
+                    }
                 '''
             }
         }
 
         stage('Run Tests') {
             steps {
-                bat '''
-                    call %VENV_DIR%\\Scripts\\activate
+                powershell '''
+                    & "$env:VENV_DIR\\Scripts\\Activate.ps1"
 
-                    echo Running pytest...
-                    pytest tests/test_qa_jobs.py ^
-                        --html=%REPORT_DIR%\\report.html ^
-                        --self-contained-html ^
+                    Write-Host "Running pytest..."
+
+                    pytest tests/test_qa_jobs.py `
+                        --html="$env:REPORT_DIR\\report.html" `
+                        --self-contained-html `
                         -v
 
-                    exit /b 0
+                    exit 0
                 '''
             }
         }
