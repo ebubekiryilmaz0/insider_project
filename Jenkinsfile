@@ -3,8 +3,8 @@ pipeline {
 
     environment {
         PYTHON_PATH = "."
-        // These can be overridden in Jenkins UI
-        HEADLESS = "True"
+        // Project name for reporting
+        PROJECT_NAME = "insider_project"
     }
 
     stages {
@@ -39,16 +39,13 @@ pipeline {
         stage('Run Tests') {
             steps {
                 script {
-                    def pytestCmd = ".venv/bin/pytest"
-                    if (!isUnix()) {
-                        pytestCmd = ".venv\\Scripts\\pytest.exe"
-                    }
+                    def runnerCmd = "python run_tests.py --headless --parallel"
                     
                     try {
                         if (isUnix()) {
-                            sh "${pytestCmd} tests/test_qa_jobs.py --html=reports/report.html --self-contained-html -v"
+                            sh ". .venv/bin/activate && ${runnerCmd}"
                         } else {
-                            bat "${pytestCmd} tests/test_qa_jobs.py --html=reports/report.html --self-contained-html -v"
+                            bat "call .venv\\Scripts\\activate && ${runnerCmd}"
                         }
                     } catch (exc) {
                         currentBuild.result = 'UNSTABLE'
