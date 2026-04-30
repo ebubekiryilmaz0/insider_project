@@ -4,7 +4,7 @@ on:
   push:
     branches: [main, master, develop]
   pull_request:
-    branches: [main, master]
+    branches: [main, master, fix/test-runner-optimization]
   # Allow manual trigger from the GitHub UI
   workflow_dispatch:
 
@@ -18,7 +18,7 @@ jobs:
       # 1. Checkout repository
       # ------------------------------------------------------------------
       - name: Checkout repository
-          uses: actions/checkout@v4
+        uses: actions/checkout@v4
 
       # ------------------------------------------------------------------
       # 2. Set up Python
@@ -51,18 +51,10 @@ jobs:
         run: mkdir -p reports/screenshots
 
       # ------------------------------------------------------------------
-      # 6. Execute test suite
+      # 6. Execute test suite via Terminal Runner
       # ------------------------------------------------------------------
-      - name: Run pytest
-        run: |
-          pytest \
-            --browser=chrome \
-            --headless=true \
-            --reruns=2 \
-            --reruns-delay=3 \
-            -v \
-            --html=reports/report.html \
-            --self-contained-html
+      - name: Run Automation Tests
+        run: python run_tests.py --browser=chrome --headless --reruns=2 --parallel
         env:
           PYTHONPATH: .
 
