@@ -87,23 +87,26 @@ def _create_chrome(headless: bool, window_size: tuple[int, int]) -> webdriver.Ch
     )
 
     if WDM_AVAILABLE:
-        driver_path = ChromeDriverManager().install()
-        # Fix for WDM bug where it sometimes returns a text file path instead of .exe
-        if not driver_path.lower().endswith(".exe"):
-            import os
-            base_dir = os.path.dirname(driver_path)
-            exe_path = os.path.join(base_dir, "chromedriver.exe")
-            if os.path.exists(exe_path):
-                driver_path = exe_path
-            else:
-                # Search recursively for chromedriver.exe in the base_dir
-                for root, dirs, files in os.walk(base_dir):
-                    if "chromedriver.exe" in files:
-                        driver_path = os.path.join(root, "chromedriver.exe")
-                        break
-        service = ChromeService(driver_path)
+        try:
+            driver_path = ChromeDriverManager().install()
+            # Fix for WDM bug where it sometimes returns a text file path instead of .exe
+            if not driver_path.lower().endswith(".exe"):
+                base_dir = os.path.dirname(driver_path)
+                exe_path = os.path.join(base_dir, "chromedriver.exe")
+                if os.path.exists(exe_path):
+                    driver_path = exe_path
+                else:
+                    # Search recursively for chromedriver.exe in the base_dir
+                    for root, dirs, files in os.walk(base_dir):
+                        if "chromedriver.exe" in files:
+                            driver_path = os.path.join(root, "chromedriver.exe")
+                            break
+            service = ChromeService(driver_path)
+        except Exception as e:
+            logger.warning("ChromeDriverManager failed (%s). Falling back to Selenium Manager.", e)
+            service = ChromeService()
     else:
-        service = ChromeService()  # assumes chromedriver is on PATH
+        service = ChromeService()  # assumes chromedriver is on PATH or handled by Selenium Manager
 
     driver = webdriver.Chrome(service=service, options=options)
     driver.set_page_load_timeout(60)
@@ -127,7 +130,11 @@ def _create_firefox(headless: bool, window_size: tuple[int, int]) -> webdriver.F
     options.add_argument(f"--height={height}")
 
     if WDM_AVAILABLE:
-        service = FirefoxService(GeckoDriverManager().install())
+        try:
+            service = FirefoxService(GeckoDriverManager().install())
+        except Exception as e:
+            logger.warning("GeckoDriverManager failed (%s). Falling back to Selenium Manager.", e)
+            service = FirefoxService()
     else:
         service = FirefoxService()
 

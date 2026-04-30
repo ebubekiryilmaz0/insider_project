@@ -46,22 +46,36 @@ A production-ready test automation framework for the [InsiderOne](https://inside
 - Chrome browser installed.
 
 ### 2. Installation
-Clone the repository and install dependencies:
+Clone the repository and run the setup script (Windows):
 ```bash
+# Clone the repository
 git clone https://github.com/ebubekiryilmaz0/insider_project.git
 cd insider_project
-pip install -r requirements.txt
+
+# Automatic setup (creates .venv and installs requirements)
+./setup.bat
 ```
 
-### 3. Running Tests
-Run all tests:
+### 3. Running Tests (Terminal)
+You can run tests using the provided `run_tests.py` CLI wrapper:
+
+| Command | Description |
+| :--- | :--- |
+| `python run_tests.py` | Run all tests (Chrome, UI mode) |
+| `python run_tests.py --headless` | Run in headless mode (no UI) |
+| `python run_tests.py --browser firefox` | Run with Firefox |
+| `python run_tests.py --smoke` | Run only smoke tests |
+| `python run_tests.py --parallel` | Run tests in parallel (faster) |
+| `python run_tests.py --help` | Show all available options |
+
+#### Standard Pytest Commands:
+Alternatively, you can use `pytest` directly:
 ```bash
+# Basic run
 pytest
-```
 
-Run with HTML report:
-```bash
-pytest --html=reports/report.html --self-contained-html
+# With specific browser and report
+pytest --browser=firefox --html=reports/report.html
 ```
 
 ## 🏗️ CI/CD Integration

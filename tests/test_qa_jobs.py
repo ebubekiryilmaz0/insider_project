@@ -10,10 +10,12 @@ from pages.careers_page import CareersPage
 class TestHomePage:
     """TC-001 to TC-004: Homepage basic visibility and load checks."""
 
+    @pytest.mark.smoke
     def test_homepage_loads_successfully(self, driver):
         home_page = HomePage(driver).load()
         assert home_page.is_homepage_loaded(), "Homepage failed to load or URL mismatch"
 
+    @pytest.mark.smoke
     def test_header_is_visible(self, driver):
         home_page = HomePage(driver).load()
         assert home_page.is_header_visible(), "Header section is not visible on homepage"
@@ -28,6 +30,7 @@ class TestHomePage:
         assert title and len(title) > 0, "Homepage title is missing or empty"
 
 
+@pytest.mark.regression
 class TestCareersJobFilter:
     """TC-005 to TC-008: Navigation to careers, filtering by QA, and validating job cards."""
 
@@ -67,6 +70,7 @@ class TestCareersJobFilter:
 class TestApplyFlow:
     """TC-009: Verification of 'Apply' button redirection to Lever."""
 
+    @pytest.mark.regression
     def test_apply_redirects_to_lever(self, driver):
         careers_page = CareersPage(driver).load()
         careers_page.scroll_to_teams_section()

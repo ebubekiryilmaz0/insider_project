@@ -2,13 +2,13 @@ pipeline {
     agent any
 
     environment {
-        HEADLESS = "True"
+        PYTHON_PATH = "."
+        PROJECT_NAME = "insider_project"
         VENV_DIR = ".venv"
         REPORT_DIR = "reports"
     }
 
     stages {
-
         stage('Checkout') {
             steps {
                 checkout scm
@@ -17,55 +17,61 @@ pipeline {
 
         stage('Setup Environment') {
             steps {
-                bat '''
-                    echo Creating virtual environment...
-                    python -m venv %VENV_DIR%
-
-                    echo Upgrading pip...
-                    %VENV_DIR%\\Scripts\\python.exe -m pip install --upgrade pip
-
-                    echo Installing dependencies...
-                    %VENV_DIR%\\Scripts\\pip.exe install -r requirements.txt
-                '''
-            }
-        }
-
-        stage('Prepare Reports Folder') {
-            steps {
-                bat '''
-                    if not exist %REPORT_DIR% mkdir %REPORT_DIR%
-                '''
+                script {
+                    if (isUnix()) {
+                        sh """
+                            python3 -m venv ${VENV_DIR}
+                            . ${VENV_DIR}/bin/activate
+                            pip install --upgrade pip
+                            pip install -r requirements.txt
+                        """
+                    } else {
+                        bat """
+                            python -m venv ${VENV_DIR}
+                            call ${VENV_DIR}\\Scripts\\activate
+                            pip install --upgrade pip
+                            pip install -r requirements.txt
+                        """
+                    }
+                }
             }
         }
 
         stage('Run Tests') {
             steps {
-                bat '''
-                    echo Running pytest...
-
-                    %VENV_DIR%\\Scripts\\pytest.exe tests\\test_qa_jobs.py ^
-                        --html=%REPORT_DIR%\\report.html ^
-                        --self-contained-html ^
-                        -v
-                '''
+                script {
+                    // Use our robust terminal runner
+                    def runnerCmd = "python run_tests.py --headless --parallel"
+                    
+                    try {
+                        if (isUnix()) {
+                            sh ". ${VENV_DIR}/bin/activate && ${runnerCmd}"
+                        } else {
+                            bat "call ${VENV_DIR}\\Scripts\\activate && ${runnerCmd}"
+                        }
+                    } catch (exc) {
+                        currentBuild.result = 'UNSTABLE'
+                        echo "Tests failed, but continuing to archive reports."
+                    }
+                }
             }
         }
     }
 
     post {
-
         always {
-            archiveArtifacts artifacts: 'reports/**/*.html, reports/**/*.png',
-                fingerprint: true,
-                allowEmptyArchive: true
-
+            // Archive the HTML report and screenshots
+            archiveArtifacts artifacts: "${REPORT_DIR}/**/*.html, ${REPORT_DIR}/**/*.png", 
+                             fingerprint: true, 
+                             allowEmptyArchive: true
+            
             script {
-                if (fileExists('reports/report.html')) {
+                if (fileExists("${REPORT_DIR}/report.html")) {
                     publishHTML([
                         allowMissing: false,
                         alwaysLinkToLastBuild: true,
                         keepAll: true,
-                        reportDir: 'reports',
+                        reportDir: "${REPORT_DIR}",
                         reportFiles: 'report.html',
                         reportName: 'Selenium Test Report'
                     ])
@@ -74,11 +80,9 @@ pipeline {
                 }
             }
         }
-
         success {
             echo 'Tests completed successfully!'
         }
-
         failure {
             echo 'Tests failed but artifacts are saved!'
         }
