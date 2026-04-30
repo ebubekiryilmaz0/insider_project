@@ -3,8 +3,9 @@ pipeline {
 
     environment {
         PYTHON_PATH = "."
-        // Project name for reporting
         PROJECT_NAME = "insider_project"
+        VENV_DIR = ".venv"
+        REPORT_DIR = "reports"
     }
 
     stages {
@@ -18,19 +19,19 @@ pipeline {
             steps {
                 script {
                     if (isUnix()) {
-                        sh '''
-                            python3 -m venv .venv
-                            . .venv/bin/activate
+                        sh """
+                            python3 -m venv ${VENV_DIR}
+                            . ${VENV_DIR}/bin/activate
                             pip install --upgrade pip
                             pip install -r requirements.txt
-                        '''
+                        """
                     } else {
-                        bat '''
-                            python -m venv .venv
-                            call .venv\\Scripts\\activate
+                        bat """
+                            python -m venv ${VENV_DIR}
+                            call ${VENV_DIR}\\Scripts\\activate
                             pip install --upgrade pip
                             pip install -r requirements.txt
-                        '''
+                        """
                     }
                 }
             }
@@ -39,13 +40,14 @@ pipeline {
         stage('Run Tests') {
             steps {
                 script {
+                    // Use our robust terminal runner
                     def runnerCmd = "python run_tests.py --headless --parallel"
                     
                     try {
                         if (isUnix()) {
-                            sh ". .venv/bin/activate && ${runnerCmd}"
+                            sh ". ${VENV_DIR}/bin/activate && ${runnerCmd}"
                         } else {
-                            bat "call .venv\\Scripts\\activate && ${runnerCmd}"
+                            bat "call ${VENV_DIR}\\Scripts\\activate && ${runnerCmd}"
                         }
                     } catch (exc) {
                         currentBuild.result = 'UNSTABLE'
@@ -59,24 +61,30 @@ pipeline {
     post {
         always {
             // Archive the HTML report and screenshots
-            archiveArtifacts artifacts: 'reports/**/*.html, reports/**/*.png', fingerprint: true, allowEmptyArchive: true
+            archiveArtifacts artifacts: "${REPORT_DIR}/**/*.html, ${REPORT_DIR}/**/*.png", 
+                             fingerprint: true, 
+                             allowEmptyArchive: true
             
-            // Publish HTML report in Jenkins UI (requires HTML Publisher Plugin)
-            publishHTML([
-                allowMissing: false,
-                alwaysLinkToLastBuild: true,
-                keepAll: true,
-                reportDir: 'reports',
-                reportFiles: 'report.html',
-                reportName: 'Selenium Test Report',
-                reportTitles: ''
-            ])
+            script {
+                if (fileExists("${REPORT_DIR}/report.html")) {
+                    publishHTML([
+                        allowMissing: false,
+                        alwaysLinkToLastBuild: true,
+                        keepAll: true,
+                        reportDir: "${REPORT_DIR}",
+                        reportFiles: 'report.html',
+                        reportName: 'Selenium Test Report'
+                    ])
+                } else {
+                    echo "Report not generated, skipping publishHTML."
+                }
+            }
         }
         success {
-            echo 'Tests passed successfully!'
+            echo 'Tests completed successfully!'
         }
         failure {
-            echo 'Tests failed!'
+            echo 'Tests failed but artifacts are saved!'
         }
     }
 }
