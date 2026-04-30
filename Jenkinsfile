@@ -2,8 +2,9 @@ pipeline {
     agent any
 
     environment {
-        PYTHON_PATH = "."
         HEADLESS = "True"
+        VENV_DIR = ".venv"
+        REPORT_DIR = "reports"
     }
 
     stages {
@@ -16,67 +17,76 @@ pipeline {
 
         stage('Setup Environment') {
             steps {
-                powershell '''
-                    # Virtual environment oluştur
-                    python -m venv .venv
+                bat '''
+                    echo Creating virtual environment...
+                    python -m venv %VENV_DIR%
 
-                    # Script execution policy sorunlarını önle
-                    Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
+                    echo Activating venv...
+                    call %VENV_DIR%\\Scripts\\activate
 
-                    # venv activate
-                    . .venv\\Scripts\\Activate.ps1
-
-                    # pip upgrade ve bağımlılıklar
+                    echo Upgrading pip...
                     python -m pip install --upgrade pip
+
+                    echo Installing dependencies...
                     pip install -r requirements.txt
+                '''
+            }
+        }
+
+        stage('Prepare Reports Folder') {
+            steps {
+                bat '''
+                    if not exist %REPORT_DIR% mkdir %REPORT_DIR%
                 '''
             }
         }
 
         stage('Run Tests') {
             steps {
-                powershell '''
-                    Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
-                    . .venv\\Scripts\\Activate.ps1
+                bat '''
+                    call %VENV_DIR%\\Scripts\\activate
 
-                    try {
-                        pytest tests/test_qa_jobs.py `
-                            --html=reports/report.html `
-                            --self-contained-html `
-                            -v
+                    echo Running pytest...
+                    pytest tests/test_qa_jobs.py ^
+                        --html=%REPORT_DIR%\\report.html ^
+                        --self-contained-html ^
+                        -v
 
-                    } catch {
-                        Write-Host "Tests failed, but continuing to archive reports."
-                        exit 0
-                    }
+                    exit /b 0
                 '''
             }
         }
     }
 
     post {
+
         always {
             archiveArtifacts artifacts: 'reports/**/*.html, reports/**/*.png',
                 fingerprint: true,
                 allowEmptyArchive: true
 
-            publishHTML([
-                allowMissing: false,
-                alwaysLinkToLastBuild: true,
-                keepAll: true,
-                reportDir: 'reports',
-                reportFiles: 'report.html',
-                reportName: 'Selenium Test Report',
-                reportTitles: ''
-            ])
+            script {
+                if (fileExists('reports/report.html')) {
+                    publishHTML([
+                        allowMissing: false,
+                        alwaysLinkToLastBuild: true,
+                        keepAll: true,
+                        reportDir: 'reports',
+                        reportFiles: 'report.html',
+                        reportName: 'Selenium Test Report'
+                    ])
+                } else {
+                    echo "Report not generated, skipping publishHTML."
+                }
+            }
         }
 
         success {
-            echo 'Tests passed successfully!'
+            echo 'Tests completed successfully!'
         }
 
         failure {
-            echo 'Tests failed!'
+            echo 'Tests failed but artifacts are saved!'
         }
     }
 }
