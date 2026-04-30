@@ -14,8 +14,14 @@ jobs:
     name: Signal Jenkins
     # This runs only when a push (or merged PR) happens on the main branch
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     steps:
+      - name: Check Secrets Configuration
+        run: |
+          if [ -z "${{ secrets.JENKINS_URL }}" ]; then echo "::error::JENKINS_URL secret is missing!"; exit 1; fi
+          if [ -z "${{ secrets.JENKINS_USER }}" ]; then echo "::error::JENKINS_USER secret is missing!"; exit 1; fi
+          if [ -z "${{ secrets.JENKINS_TOKEN }}" ]; then echo "::error::JENKINS_TOKEN secret is missing!"; exit 1; fi
+
       - name: Trigger Jenkins Job
         uses: appleboy/jenkins-action@master
         with:
