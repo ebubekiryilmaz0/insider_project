@@ -17,46 +17,36 @@ pipeline {
 
         stage('Setup Environment') {
             steps {
-                powershell '''
-                    Write-Host "Creating virtual environment..."
+                bat '''
+                    echo Creating virtual environment...
+                    python -m venv %VENV_DIR%
 
-                    python -m venv $env:VENV_DIR
+                    echo Upgrading pip...
+                    %VENV_DIR%\\Scripts\\python.exe -m pip install --upgrade pip
 
-                    Write-Host "Activating venv..."
-                    & "$env:VENV_DIR\\Scripts\\Activate.ps1"
-
-                    Write-Host "Upgrading pip..."
-                    python -m pip install --upgrade pip
-
-                    Write-Host "Installing dependencies..."
-                    pip install -r requirements.txt
+                    echo Installing dependencies...
+                    %VENV_DIR%\\Scripts\\pip.exe install -r requirements.txt
                 '''
             }
         }
 
         stage('Prepare Reports Folder') {
             steps {
-                powershell '''
-                    if (!(Test-Path $env:REPORT_DIR)) {
-                        New-Item -ItemType Directory -Path $env:REPORT_DIR
-                    }
+                bat '''
+                    if not exist %REPORT_DIR% mkdir %REPORT_DIR%
                 '''
             }
         }
 
         stage('Run Tests') {
             steps {
-                powershell '''
-                    & "$env:VENV_DIR\\Scripts\\Activate.ps1"
+                bat '''
+                    echo Running pytest...
 
-                    Write-Host "Running pytest..."
-
-                    pytest tests/test_qa_jobs.py `
-                        --html="$env:REPORT_DIR\\report.html" `
-                        --self-contained-html `
+                    %VENV_DIR%\\Scripts\\pytest.exe tests\\test_qa_jobs.py ^
+                        --html=%REPORT_DIR%\\report.html ^
+                        --self-contained-html ^
                         -v
-
-                    exit 0
                 '''
             }
         }
