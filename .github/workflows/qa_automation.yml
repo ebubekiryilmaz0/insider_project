@@ -2,9 +2,7 @@ name: QA Automation — InsiderOne
 
 on:
   push:
-    branches: [main, master, develop]
-  pull_request:
-    branches: [main, master, fix/test-runner-optimization]
+    branches: [main, master]
   # Allow manual trigger from the GitHub UI
   workflow_dispatch:
 
