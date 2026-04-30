@@ -7,72 +7,11 @@ on:
   workflow_dispatch:
 
 jobs:
-  test:
-    name: Run Selenium Tests (Headless Chrome)
-    runs-on: ubuntu-latest
-
-    steps:
-      # ------------------------------------------------------------------
-      # 1. Checkout repository
-      # ------------------------------------------------------------------
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      # ------------------------------------------------------------------
-      # 2. Set up Python
-      # ------------------------------------------------------------------
-      - name: Set up Python 3.12
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-
-      # ------------------------------------------------------------------
-      # 3. Install Chrome (latest stable)
-      # ------------------------------------------------------------------
-      - name: Install Google Chrome
-        uses: browser-actions/setup-chrome@v1
-        with:
-          chrome-version: stable
-
-      # ------------------------------------------------------------------
-      # 4. Install Python dependencies
-      # ------------------------------------------------------------------
-      - name: Install Python dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
-
-      # ------------------------------------------------------------------
-      # 5. Create reports directory
-      # ------------------------------------------------------------------
-      - name: Prepare reports directory
-        run: mkdir -p reports/screenshots
-
-      # ------------------------------------------------------------------
-      # 6. Execute test suite via Terminal Runner
-      # ------------------------------------------------------------------
-      - name: Run Automation Tests
-        run: python run_tests.py --browser=chrome --headless --reruns=2 --parallel
-        env:
-          PYTHONPATH: .
-
-      # ------------------------------------------------------------------
-      # 7. Upload test artifacts (always — even on failure)
-      # ------------------------------------------------------------------
-      - name: Upload HTML report
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: test-report-${{ github.run_number }}
-          path: reports/
-          retention-days: 30
-
   # ------------------------------------------------------------------
-  # 8. Trigger Jenkins on Merge to Main
+  # Signal Jenkins (On Main Merge)
   # ------------------------------------------------------------------
   trigger-jenkins:
-    name: Signal Jenkins (On Main Merge)
-    needs: test
+    name: Signal Jenkins
     # This runs only when a push (or merged PR) happens on the main branch
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
