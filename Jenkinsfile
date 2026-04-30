@@ -8,6 +8,10 @@ pipeline {
         REPORT_DIR = "reports"
     }
 
+    triggers {
+        githubPush()
+    }
+
     stages {
         stage('Checkout') {
             steps {
