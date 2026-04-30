@@ -14,12 +14,12 @@ jobs:
     name: Signal Jenkins
     # This runs only when a push (or merged PR) happens on the main branch
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     steps:
       - name: Trigger Jenkins Job
         uses: appleboy/jenkins-action@master
         with:
-          url: "http://localhost:8080"
+          url: "https://area-hypnotize-evacuate.ngrok-free.dev"
           user: "admin"
           token: "1186d35e103a9c320840b15bd4d7c3424e"
           job: "Insider-Automation-Job"
